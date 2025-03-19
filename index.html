@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>向下滑动有惊喜</title>
+    <style>
+        audio{
+			display: none;
+		}
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            font-family: 'Arial', 'Microsoft Yahei', sans-serif;
+        }
+
+        .container {
+            height: 100vh;
+            perspective: 2000px;
+            overflow: hidden;
+            transform-style: preserve-3d;
+        }
+
+        /* 通用section样式 */
+        .section {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            will-change: transform, opacity, background;
+        }
+
+        /* 第一种动效样式 */
+        .parallax-section {
+            transition: transform 1.5s cubic-bezier(0.25, 1, 0.5, 1),
+                       background 1.2s ease;
+        }
+
+        /* 第二种动效样式 */
+        .transform-section {
+            transform-style: preserve-3d;
+            transition: transform 1.2s cubic-bezier(0.22, 0.61, 0.36, 1),
+                       opacity 1.2s ease;
+        }
+
+        .content {
+            text-align: center;
+            color: white;
+            max-width: 80%;
+            padding: 20px;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* 第一种动效内容 */
+        .parallax-content {
+            transform: translateZ(500px);
+            opacity: 0;
+            transition: all 1s ease;
+        }
+
+        /* 第二种动效内容 */
+        .transform-content {
+            transform: translateZ(300px) scale(0.8);
+            opacity: 0;
+            transition: all 1s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .active .parallax-content {
+            transform: translateZ(0);
+            opacity: 1;
+        }
+
+        .active .transform-content {
+            transform: translateZ(0) scale(1);
+            opacity: 1;
+        }
+
+        /* 文字动画 */
+        h1 {
+            font-size: 4em;
+            margin-bottom: 1.5rem;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.8s ease;
+        }
+
+        p {
+            font-size: 1.2em;
+            line-height: 1.6;
+            transform: translateY(80px);
+            opacity: 0;
+            transition: all 0.8s ease;
+        }
+
+        .active h1 {
+            opacity: 1;
+            transform: translateY(0);
+            transition-delay: 0.4s;
+        }
+
+        .active p {
+            opacity: 1;
+            transform: translateY(0);
+            transition-delay: 0.6s;
+        }
+
+        .bg-overlay {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.3);
+            z-index: 1;
+        }
+
+        .parallax-layer {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            transition: all 1.5s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+    </style>
+</head>
+<body>
+    <audio src="music/music.mp3" autoplay="autoplay" loop controls preload="auto" style="display: none;"></audio>
+    <div class="container">
+        <!-- 第一屏 - 视差动效 -->
+        <section class="section parallax-section active" style="background: #1a1a1a;">
+            <div class="parallax-layer" style="transform: translateZ(-500px)"></div>
+            <div class="content parallax-content">
+                <h1>向下滑动</h1>
+                <p>向下滑动有惊喜</p>
+            </div>
+        </section>
+
+        <!-- 第二屏 - 混合动效 -->
+        <section class="section transform-section" style="background: #3498db;">
+            <div class="bg-overlay"></div>
+            <div class="content transform-content">
+                <h1>向下滑动</h1>
+                <p>继续向下滑动</p>
+            </div>
+            <div class="parallax-layer" style="transform: translateZ(-300px)"></div>
+        </section>
+
+        <!-- 第三屏 - 变形动效 -->
+        <section class="section transform-section" style="background: #9b59b6;">
+            <div class="bg-overlay"></div>
+            <div class="content transform-content">
+                <h1>我是你爹</h1>
+                <p>❤❤❤我是你爹❤❤❤</p>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        class HybridScroll {
+            constructor() {
+                this.sections = Array.from(document.querySelectorAll('.section'))
+                this.currentIndex = 0
+                this.isAnimating = false
+                this.init()
+            }
+
+            init() {
+                document.addEventListener('wheel', this.handleScroll.bind(this))
+                document.addEventListener('touchstart', this.touchStart.bind(this))
+                document.addEventListener('touchend', this.touchEnd.bind(this))
+                window.addEventListener('resize', this.handleResize.bind(this))
+            }
+
+            handleScroll(e) {
+                if (this.isAnimating) return
+                this.isAnimating = true
+
+                const direction = Math.sign(e.deltaY)
+                this.navigate(direction)
+                
+                setTimeout(() => this.isAnimating = false, 1200)
+            }
+
+            touchStart(e) {
+                this.startY = e.touches[0].clientY
+            }
+
+            touchEnd(e) {
+                const endY = e.changedTouches[0].clientY
+                const delta = this.startY - endY
+                if (Math.abs(delta) < 50) return
+
+                this.navigate(Math.sign(delta))
+            }
+
+            navigate(direction) {
+                const newIndex = Math.min(Math.max(
+                    this.currentIndex + direction,
+                    0
+                ), this.sections.length - 1)
+
+                if (newIndex === this.currentIndex) return
+
+                this.animateSections(newIndex)
+                this.currentIndex = newIndex
+            }
+
+            animateSections(newIndex) {
+                this.sections.forEach((section, index) => {
+                    const offset = (index - newIndex) * 100
+                    const isTransformSection = section.classList.contains('transform-section')
+
+                    if (isTransformSection) {
+                        // 变形动效逻辑
+                        section.style.transform = `translateZ(${offset}vh) 
+                                                 rotateX(${index < newIndex ? 15 : -15}deg)
+                                                 scale(${1 - Math.abs(offset)/120})`
+                        section.style.opacity = 1 - Math.abs(offset)/100
+                    } else {
+                        // 视差动效逻辑
+                        section.style.transform = `translateZ(${offset}vh)`
+                        const progress = Math.abs(offset)/100
+                        section.style.background = `hsl(${200 - progress * 50}, 70%, 30%)`
+                    }
+
+                    section.classList.toggle('active', index === newIndex)
+                })
+            }
+
+            handleResize() {
+                this.sections.forEach(section => {
+                    section.style.transform = ''
+                })
+                this.animateSections(this.currentIndex)
+            }
+        }
+
+        window.addEventListener('load', () => new HybridScroll())
+    </script>
+</body>
+</html>
